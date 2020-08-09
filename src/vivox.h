@@ -1,0 +1,8 @@
+#include "vivox-proprietary/vivox-config.h"
+#include "vivox-proprietary/Vxc.h"
+#include "vivox-proprietary/VxcErrors.h"
+#include "vivox-proprietary/VxcEvents.h"
+#include "vivox-proprietary/VxcExports.h"
+#include "vivox-proprietary/VxcRequests.h"
+#include "vivox-proprietary/VxcResponses.h"
+#include "vivox-proprietary/VxcTypes.h"

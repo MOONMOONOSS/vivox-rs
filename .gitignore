@@ -11,3 +11,5 @@ Cargo.lock
 
 # Proprietary header files for Vivox
 src/vivox-proprietary
+
+vivoxsdk.lib
