@@ -13,3 +13,5 @@ Cargo.lock
 src/vivox-proprietary
 
 vivoxsdk.lib
+
+vivoxsdk.dll
