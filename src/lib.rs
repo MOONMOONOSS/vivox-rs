@@ -8,6 +8,8 @@ extern crate serde;
 extern crate futures;
 
 use serde::{Serialize, Deserialize};
+use std::ffi::CString;
+use std::os::raw::c_char;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -59,7 +61,6 @@ pub fn hello_vivox() {
 }
 
 fn init() -> i32 {
-  use std::ffi::CString;
   use std::mem;
 
   unsafe {
@@ -98,8 +99,32 @@ fn init() -> i32 {
   }
 }
 
+struct AnonymousLogin {
+  req_ptr: *mut vx_req_account_anonymous_login_t,
+}
+
+impl AnonymousLogin {
+  pub fn new() -> Self {
+    use std::mem;
+
+    unsafe {
+      Self {
+        req_ptr: mem::zeroed(),
+      }
+    }
+  }
+}
+
+fn strdup(input: &str) -> *mut c_char {
+  unsafe {
+    vx_strdup(CString::new(input)
+      .expect("Unable to allocate string")
+      .as_ptr()
+    )
+  }
+}
+
 fn login() {
-  use std::ffi::CString;
   use std::mem;
   use std::time::SystemTime;
 
@@ -107,42 +132,23 @@ fn login() {
     let mut req: *mut vx_req_account_anonymous_login_t = mem::zeroed();
     vx_req_account_anonymous_login_create(&mut req);
 
-    (*req).connector_handle = vx_strdup(
-      CString::new("c1")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
-
-    (*req).acct_name = vx_strdup(
-      CString::new(".gmclvivox-gmvivox-w-dev.dunkel.")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
-
-    (*req).displayname = vx_strdup(
-      CString::new("Dunkel")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
-
+    (*req).connector_handle = strdup("c1");
+    (*req).acct_name = strdup(".gmclvivox-gmvivox-w-dev.dunkel.");
+    (*req).displayname = strdup("Dunkel");
     (*req).account_handle = vx_strdup((*req).acct_name);
-    (*req).access_token = vx_strdup(
-      CString::new(
-        vx_generate_token(
-          "get_your_own!",
-          "gmclvivox-gmvivox-w-dev",
-          SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .expect("Back from the future")
-            .as_secs() + 120,
-          "login",
-          1,
-          "sip:.gmclvivox-gmvivox-w-dev.dunkel.@vdx5.vivox.com",
-          None,
-        )
-      )
-        .expect("Unable to allocate string")
-        .as_ptr()
+    (*req).access_token = strdup(
+      &vx_generate_token(
+        "get_your_own!",
+        "gmclvivox-gmvivox-w-dev",
+        SystemTime::now()
+          .duration_since(SystemTime::UNIX_EPOCH)
+          .expect("Back from the future")
+          .as_secs() + 120,
+        "login",
+        1,
+        "sip:.gmclvivox-gmvivox-w-dev.dunkel.@vdx5.vivox.com",
+        None,
+      ),
     );
 
     vx_issue_request(&mut (*req).base);
@@ -150,7 +156,6 @@ fn login() {
 }
 
 fn join_echo() {
-  use std::ffi::CString;
   use std::mem;
   use std::time::SystemTime;
 
@@ -158,50 +163,27 @@ fn join_echo() {
     let mut req: *mut vx_req_sessiongroup_add_session = mem::zeroed();
     vx_req_sessiongroup_add_session_create(&mut req);
 
-    (*req).sessiongroup_handle = vx_strdup(
-      CString::new("sg1")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
-
-    (*req).session_handle = vx_strdup(
-      CString::new("echotest")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
-
-    (*req).uri = vx_strdup(
-      CString::new("sip:confctl-e-gmclvivox-gmvivox-w-dev.echotest@vdx5.vivox.com")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
+    (*req).sessiongroup_handle = strdup("sg1");
+    (*req).session_handle = strdup("echotest");
+    (*req).uri = strdup("sip:confctl-e-gmclvivox-gmvivox-w-dev.echotest@vdx5.vivox.com");
 
     (*req).connect_audio = 1;
     (*req).connect_text = 1;
 
-    (*req).account_handle = vx_strdup(
-      CString::new(".gmclvivox-gmvivox-w-dev.dunkel.")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
-
-    (*req).access_token = vx_strdup(
-      CString::new(
-        vx_generate_token(
-          "get_your_own!",
-          "gmclvivox-gmvivox-w-dev",
-          SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .expect("Back from the future")
-            .as_secs() + 240,
-          "join",
-          8,
-          "sip:.gmclvivox-gmvivox-w-dev.dunkel.@vdx5.vivox.com",
-          Some("sip:confctl-e-gmclvivox-gmvivox-w-dev.echotest@vdx5.vivox.com".to_string()),
-        )
+    (*req).account_handle = strdup(".gmclvivox-gmvivox-w-dev.dunkel.");
+    (*req).access_token = strdup(
+      &vx_generate_token(
+        "get_your_own!",
+        "gmclvivox-gmvivox-w-dev",
+        SystemTime::now()
+          .duration_since(SystemTime::UNIX_EPOCH)
+          .expect("Back from the future")
+          .as_secs() + 240,
+        "join",
+        8,
+        "sip:.gmclvivox-gmvivox-w-dev.dunkel.@vdx5.vivox.com",
+        Some("sip:confctl-e-gmclvivox-gmvivox-w-dev.echotest@vdx5.vivox.com".to_string()),
       )
-        .expect("Unable to allocate string")
-        .as_ptr()
     );
 
     vx_issue_request(&mut (*req).base);
@@ -331,7 +313,6 @@ fn event_handler(evt: *mut vx_evt_base_t) {
 }
 
 fn create_connector() {
-  use std::ffi::CString;
   use std::mem;
 
   unsafe {
@@ -340,16 +321,8 @@ fn create_connector() {
     // Creates default Connector Create request struct
     vx_req_connector_create_create(&mut req);
 
-    (*req).connector_handle = vx_strdup(
-      CString::new("c1")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
-    (*req).acct_mgmt_server = vx_strdup(
-      CString::new("https://vdx5.www.vivox.com/api2")
-        .expect("Unable to allocate string")
-        .as_ptr()
-    );
+    (*req).connector_handle = strdup("c1");
+    (*req).acct_mgmt_server = strdup("https://vdx5.www.vivox.com/api2");
 
     vx_issue_request(&mut (*req).base);
   }
