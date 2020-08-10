@@ -8,8 +8,9 @@ extern crate serde;
 extern crate futures;
 
 use serde::{Serialize, Deserialize};
-use std::ffi::CString;
-use std::os::raw::c_char;
+use std::ffi::{CString, CStr};
+use std::os::raw::{c_char, c_int};
+use std::time::SystemTime;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -103,15 +104,125 @@ struct AnonymousLogin {
   req_ptr: *mut vx_req_account_anonymous_login_t,
 }
 
+#[allow(dead_code)]
 impl AnonymousLogin {
   pub fn new() -> Self {
     use std::mem;
 
     unsafe {
-      Self {
+      let mut new_req = Self {
         req_ptr: mem::zeroed(),
-      }
+      };
+
+      vx_req_account_anonymous_login_create(&mut new_req.req_ptr);
+
+      new_req
     }
+  }
+
+  pub fn acct_mgmt_server<'a>(&'a mut self, input: &str) -> &'a mut Self {
+    unsafe { (*self.req_ptr).acct_mgmt_server = strdup(input); }
+
+    self
+  }
+
+  pub fn acct_name<'a>(&'a mut self, input: &str) -> &'a mut Self {
+    unsafe { (*self.req_ptr).acct_name = strdup(input); }
+
+    self
+  }
+
+  pub fn account_handle<'a>(&'a mut self, input: &str) -> &'a mut Self {
+    unsafe { (*self.req_ptr).account_handle = strdup(input); }
+
+    self
+  }
+
+  pub fn access_token<'a>(&'a mut self, issuer: &str, domain: &str) -> &'a mut Self {
+    unsafe {
+      (*self.req_ptr).access_token = strdup(
+        &vx_generate_token(
+          "get_your_own!",
+          issuer,
+          SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .expect("Back from the future")
+            .as_secs() + 120,
+          "login",
+          1,
+          &format!(
+            "sip:{}@{}",
+            CStr::from_ptr((*self.req_ptr).acct_name).to_str().unwrap(),
+            domain,
+          ),
+          None,
+        )
+      );
+    }
+
+    self
+  }
+
+  pub fn application_override<'a>(&'a mut self, input: &str) -> &'a mut Self {
+    unsafe { (*self.req_ptr).application_override = strdup(input); }
+
+    self
+  }
+
+  pub fn application_token<'a>(&'a mut self, input: &str) -> &'a mut Self {
+    unsafe { (*self.req_ptr).application_token = strdup(input); }
+
+    self
+  }
+
+  pub fn autopost_crash_dumps<'a>(&'a mut self, input: c_int) -> &'a mut Self {
+    unsafe { (*self.req_ptr).autopost_crash_dumps = input; }
+
+    self
+  }
+
+  pub fn buddy_management_mode(self) {
+    panic!("Reserved for future use")
+  }
+
+  pub fn connector_handle<'a>(&'a mut self, input: &str) -> &'a mut Self {
+    unsafe { (*self.req_ptr).connector_handle = strdup(input); }
+
+    self
+  }
+
+  pub fn displayname<'a>(&'a mut self, input: &str) -> &'a mut Self {
+    unsafe { (*self.req_ptr).displayname = strdup(input); }
+
+    self
+  }
+
+  pub fn enable_social<'a>(&'a mut self, input: c_int) -> &'a mut Self {
+    unsafe { (*self.req_ptr).enable_buddies_and_presence = input; }
+
+    self
+  }
+
+  pub fn issue<'a>(&'a mut self) {
+    unsafe { vx_issue_request(&mut (*self.req_ptr).base); }
+  }
+
+  pub fn languages<'a>(&'a mut self, input: &str) -> &'a mut Self {
+    unsafe { (*self.req_ptr).languages = strdup(input); }
+
+    self
+  }
+
+  pub fn participant_property_frequency<'a>(&'a mut self, input: c_int) -> &'a mut Self {
+    unsafe { (*self.req_ptr).participant_property_frequency = input; }
+
+    self
+  }
+
+  pub fn persist_presence<'a>(&'a mut self, input: c_int) -> &'a mut Self {
+    unsafe { (*self.req_ptr).enable_presence_persistence = input; }
+
+    self
   }
 }
 
@@ -125,39 +236,19 @@ fn strdup(input: &str) -> *mut c_char {
 }
 
 fn login() {
-  use std::mem;
-  use std::time::SystemTime;
+  let act_name = ".gmclvivox-gmvivox-w-dev.dunkel.";
 
-  unsafe {
-    let mut req: *mut vx_req_account_anonymous_login_t = mem::zeroed();
-    vx_req_account_anonymous_login_create(&mut req);
-
-    (*req).connector_handle = strdup("c1");
-    (*req).acct_name = strdup(".gmclvivox-gmvivox-w-dev.dunkel.");
-    (*req).displayname = strdup("Dunkel");
-    (*req).account_handle = vx_strdup((*req).acct_name);
-    (*req).access_token = strdup(
-      &vx_generate_token(
-        "get_your_own!",
-        "gmclvivox-gmvivox-w-dev",
-        SystemTime::now()
-          .duration_since(SystemTime::UNIX_EPOCH)
-          .expect("Back from the future")
-          .as_secs() + 120,
-        "login",
-        1,
-        "sip:.gmclvivox-gmvivox-w-dev.dunkel.@vdx5.vivox.com",
-        None,
-      ),
-    );
-
-    vx_issue_request(&mut (*req).base);
-  }
+  AnonymousLogin::new()
+    .connector_handle("c1")
+    .acct_name(act_name)
+    .displayname("Dunkel")
+    .account_handle(act_name)
+    .access_token("gmclvivox-gmvivox-w-dev", "vdx5.vivox.com")
+    .issue();
 }
 
 fn join_echo() {
   use std::mem;
-  use std::time::SystemTime;
 
   unsafe {
     let mut req: *mut vx_req_sessiongroup_add_session = mem::zeroed();
@@ -237,8 +328,6 @@ fn message_handler(msg: *mut vx_message_base_t) {
 }
 
 fn response_handler(resp: *mut vx_resp_base_t) {
-  use std::ffi::CStr;
-
   unsafe {
     if (*resp).return_code == 1 {
       println!("[Vivox] ERROR {}, {}", (*resp).status_code, CStr::from_ptr(vx_get_error_string((*resp).status_code)).to_str().unwrap());
@@ -258,7 +347,6 @@ fn response_handler(resp: *mut vx_resp_base_t) {
 
 #[allow(unused_variables)]
 fn event_handler(evt: *mut vx_evt_base_t) {
-  use std::ffi::CStr;
   use std::mem::transmute;
 
   unsafe {
