@@ -1,5 +1,4 @@
 use std::io::{self, Read};
-use std::thread;
 
 use vivoxrs::hello_vivox;
 
