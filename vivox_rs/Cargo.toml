@@ -6,7 +6,7 @@ license = "Unlicense"
 edition = "2018"
 description = "Safe wrapper for the Vivox Core SDK"
 repository = "https://github.com/MOONMOONOSS/vivox-rs"
-keywords = ["vivox", "sdk", "voip", "voice", "text", "chat"]
+keywords = ["vivox", "sdk", "voip", "voice", "chat"]
 categories = ["api-bindings", "game-engines"]
 
 [lib]
