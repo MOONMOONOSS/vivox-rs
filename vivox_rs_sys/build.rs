@@ -49,6 +49,9 @@ fn main() {
   bindings
     .write_to_file(out_path.join("bindings.rs"))
     .expect("Couldn't write bindings!");
+
+  // Delete local proprietary files
+  fs::remove_dir_all(prop_dir).unwrap();
 }
 
 fn verify_installation(target: &str, sdk_path: &Path) {
