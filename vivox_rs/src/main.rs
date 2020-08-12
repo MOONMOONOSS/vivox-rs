@@ -1,6 +1,6 @@
 use std::io::{self, Read};
 
-use vivoxrs::hello_vivox;
+use vivox_rs::hello_vivox;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {

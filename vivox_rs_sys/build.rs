@@ -73,6 +73,10 @@ fn verify_installation(target: &str, sdk_path: &Path) {
         sdk_path.join("SDK/Libraries/Release/x64/vivoxsdk.dll").exists(),
         MISSING_SETUP
       );
+      assert!(
+        sdk_path.join("SDK/Libraries/Release/x64/vivoxsdk.lib").exists(),
+        MISSING_SETUP
+      );
     }
 
     _ => panic!(INCOMPATIBLE_PLATFORM),

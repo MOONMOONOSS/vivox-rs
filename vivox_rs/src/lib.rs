@@ -7,12 +7,19 @@
 extern crate serde;
 extern crate futures;
 
-use serde::{Serialize, Deserialize};
+pub(crate) use vivox_rs_sys::*;
+
 use std::ffi::{CString, CStr};
-use std::os::raw::{c_char, c_int};
+use std::os::raw::c_int;
 use std::time::SystemTime;
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+pub mod sessiongroup;
+pub mod tokengen;
+pub(crate) mod helpers;
+
+use crate::helpers::*;
+use crate::sessiongroup::AddSession;
+use crate::tokengen::TokenGenerator;
 
 static mut connected: bool = false;
 static mut logged_in: bool = false;
@@ -226,15 +233,6 @@ impl AnonymousLogin {
   }
 }
 
-fn strdup(input: &str) -> *mut c_char {
-  unsafe {
-    vx_strdup(CString::new(input)
-      .expect("Unable to allocate string")
-      .as_ptr()
-    )
-  }
-}
-
 fn login() {
   let act_name = ".gmclvivox-gmvivox-w-dev.dunkel.";
 
@@ -247,235 +245,18 @@ fn login() {
     .issue();
 }
 
-#[derive(Debug, Copy, Clone)]
-struct TokenGenerator {
-  req_index: u64,
-}
-
-impl TokenGenerator {
-  pub const fn init() -> Self {
-    Self {
-      req_index: 0,
-    }
-  }
-
-  pub fn generate(
-    mut self,
-    key: &str,
-    issuer: &str,
-    exp: u64,
-    vxa: &str,
-    f: &str,
-    t: Option<String>,
-  ) -> String {
-    use data_encoding::BASE64URL_NOPAD;
-    use hmac::{Hmac, Mac, NewMac};
-    use sha2::Sha256;
-    // Header is static - base64url encoded {}
-    let header = BASE64URL_NOPAD.encode(b"{}");
-  
-    // Create payload and base64 encode
-    let tr = TokenRequest {
-      iss: issuer.to_string(),
-      exp,
-      vxa: vxa.to_string(),
-      vxi: self.req_index,
-      f: f.to_string(),
-      t,
-    };
-    let mut obj = serde_json::to_string(&tr)
-      .expect("Unable to serialize object!");
-  
-    obj = BASE64URL_NOPAD.encode(obj.as_bytes());
-  
-    // Join segments to prepare for signing
-    let to_sign = format!("{}.{}", header, obj);
-  
-    // Create alias for HMAC-SHA256
-    type HmacSha256 = Hmac<Sha256>;
-  
-    let mut mac = HmacSha256::new_varkey(key.as_bytes())
-      .expect("HMAC can take key of any size");
-  
-    mac.update(to_sign.as_bytes());
-  
-    let res = mac.finalize();
-  
-    // Sign token with key and HMACSHA256, then base64 encode
-    let signed_payload = BASE64URL_NOPAD.encode(&res.into_bytes());
-
-    // Token has been generated. Increment counter
-
-    self.req_index += 1;
-  
-    // Combine header and payload with signature
-    format!("{}.{}", to_sign, signed_payload)
-  }  
-}
-
-struct AddSession<'u> {
-  req_ptr: *mut vx_req_sessiongroup_add_session,
-  uri: &'u str,
-}
-
-#[allow(dead_code)]
-impl<'a> AddSession<'a> {
-  pub fn new() -> Self {
-    use std::mem;
-
-    unsafe {
-      let mut new_req = Self {
-        req_ptr: mem::zeroed(),
-        uri: "",
-      };
-
-      vx_req_sessiongroup_add_session_create(&mut new_req.req_ptr);
-
-      new_req
-    }
-  }
-
-  pub fn account_handle(&'a mut self, input: &str) -> &'a mut Self {
-    unsafe { (*self.req_ptr).account_handle = strdup(input); }
-
-    self
-  }
-
-  pub fn access_token(
-    &'a mut self,
-    issuer: &str,
-    domain: &str,
-  ) -> &'a mut Self
-  {
-    if self.uri == "" {
-      panic!("uri not set prior to requesting access token!");
-    }
-
-    unsafe {
-      (*self.req_ptr).access_token = strdup(
-        &generator.generate(
-          "get_your_own!",
-          issuer,
-          SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .expect("Back from the future")
-            .as_secs() + 120,
-          "join",
-          &format!(
-            "sip:{}@{}",
-            CStr::from_ptr((*self.req_ptr).account_handle).to_str().unwrap(),
-            domain,
-          ),
-          Some(self.uri.to_string()),
-        )
-      );
-    }
-
-    self
-  }
-
-  pub fn connect_audio(&'a mut self, input: c_int) -> &'a mut Self {
-    unsafe { (*self.req_ptr).connect_audio = input; }
-
-    self
-  }
-
-  pub fn connect_text(&'a mut self, input: c_int) -> &'a mut Self {
-    unsafe { (*self.req_ptr).connect_text = input; }
-
-    self
-  }
-
-  pub fn issue(&'a mut self) {
-    unsafe { vx_issue_request(&mut (*self.req_ptr).base); }
-  }
-
-  pub fn jitter_compensation(&'a mut self, input: c_int) -> &'a mut Self {
-    unsafe { (*self.req_ptr).jitter_compensation = input; }
-
-    self
-  }
-
-  pub fn name(&'a mut self, input: &str) -> &'a mut Self {
-    unsafe { (*self.req_ptr).name = strdup(input); }
-
-    self
-  }
-
-  pub fn password(&'a mut self, input: &str) -> &'a mut Self {
-    unsafe { (*self.req_ptr).password = strdup(input); }
-
-    self
-  }
-
-  pub fn password_hash_algorithm(
-    &'a mut self,
-    input: vx_password_hash_algorithm_t
-  ) -> &'a mut Self {
-    unsafe { (*self.req_ptr).password_hash_algorithm = input; }
-
-    self
-  }
-
-  pub fn session_font_id(&'a mut self, input: c_int) -> &'a mut Self {
-    unsafe { (*self.req_ptr).session_font_id = input; }
-
-    self
-  }
-
-  pub fn session_handle(&'a mut self, input: &str) -> &'a mut Self {
-    unsafe { (*self.req_ptr).session_handle = strdup(input); }
-
-    self
-  }
-
-  pub fn sessiongroup_handle(&'a mut self, input: &str) -> &'a mut Self {
-    unsafe { (*self.req_ptr).sessiongroup_handle = strdup(input); }
-
-    self
-  }
-
-  pub fn uri(&'a mut self, input: &'a str) -> &'a mut Self {
-    // Tests without "sip:" and "@vdx5..."
-    let start = input.find(':').unwrap_or(0) + 1;
-    let end = input.find('@').unwrap_or(1) - 1;
-    let sub = &input[start..end];
-
-    let test = sub
-      .chars()
-      .all(|c|
-        c.is_alphanumeric()
-        || is_valid_non_alphanumeric(&c)
-      )
-      && sub.len() <= MAX_CHANNEL_URI_LENGTH as usize;
-
-    if !test {
-      panic!("URI validation failed!");
-    }
-
-    // Store locally for access_token()
-    self.uri = input;
-
-    unsafe { (*self.req_ptr).uri = strdup(input); }
-
-    self
-  }
-}
-
-fn is_valid_non_alphanumeric(x: &char) -> bool {
-  "-_.!~*'()&=+$,;?/".chars().any(|y| y == *x)
-}
-
 fn join_echo() {
-  AddSession::new()
-    .sessiongroup_handle("sg1")
-    .session_handle("echotest")
-    .uri("sip:confctl-e-gmclvivox-gmvivox-w-dev.echotest@vdx5.vivox.com")
-    .connect_audio(1)
-    .connect_text(1)
-    .account_handle(".gmclvivox-gmvivox-w-dev.dunkel.")
-    .access_token("gmclvivox-gmvivox-w-dev", "vdx5.vivox.com")
-    .issue();
+  unsafe {
+    AddSession::new()
+      .sessiongroup_handle("sg1")
+      .session_handle("echotest")
+      .uri("sip:confctl-e-gmclvivox-gmvivox-w-dev.echotest@vdx5.vivox.com")
+      .connect_audio(1)
+      .connect_text(1)
+      .account_handle(".gmclvivox-gmvivox-w-dev.dunkel.")
+      .access_token("gmclvivox-gmvivox-w-dev", "vdx5.vivox.com", &generator)
+      .issue();
+  }
 }
 
 fn poll_loop() {
@@ -611,17 +392,6 @@ fn create_connector() {
 
     vx_issue_request(&mut (*req).base);
   }
-}
-
-#[derive(Serialize, Deserialize)]
-struct TokenRequest {
-  iss: String,
-  exp: u64,
-  vxa: String,
-  vxi: u64,
-  f: String,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  t: Option<String>,
 }
 
 #[cfg(test)]
