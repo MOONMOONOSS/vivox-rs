@@ -15,3 +15,5 @@ src/vivox-proprietary
 vivoxsdk.lib
 
 vivoxsdk.dll
+
+doc/
