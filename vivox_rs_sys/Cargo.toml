@@ -1,6 +1,6 @@
 [package]
 name = "vivox_rs_sys"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Joseph Zurowski <Dunklheit@users.noreply.github.com>"]
 license = "Unlicense"
 edition = "2018"

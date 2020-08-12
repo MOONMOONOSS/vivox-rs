@@ -20,12 +20,8 @@ fn main() {
   println!("cargo:rerun-if-changed={}/SDK/include/vivox-config.h", sdk_path.display());
 
   // Copy vivox headers to our src folder
-  let mut prop_dir = PathBuf::from(env::current_exe().unwrap());
-  prop_dir.pop(); // Suffer and wince at my lazy programming
-  prop_dir.pop();
-  prop_dir.pop();
-  prop_dir.pop();
-  prop_dir.pop();
+  let mut prop_dir = PathBuf::from(env::current_dir().unwrap());
+  
   prop_dir.push("src");
   prop_dir.push("vivox-proprietary");
   println!("{}", prop_dir.display());
