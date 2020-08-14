@@ -2,22 +2,26 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-#![feature(async_closure)]
-
-extern crate serde;
 extern crate futures;
+extern crate num;
+extern crate serde;
+
+#[macro_use]
+extern crate num_derive;
 
 pub(crate) use vivox_rs_sys::*;
 
-use std::ffi::{CString, CStr};
+use std::ffi::CStr;
 use std::os::raw::c_int;
 use std::time::SystemTime;
 
 pub mod error;
+pub mod misc;
 pub mod sessiongroup;
 pub mod tokengen;
 pub(crate) mod helpers;
 
+use crate::error::VivoxError;
 use crate::helpers::*;
 use crate::sessiongroup::AddSession;
 use crate::tokengen::TokenGenerator;
@@ -30,7 +34,7 @@ pub fn hello_vivox() {
   use std::{thread, time::Duration};
 
   println!("Starting Vivox...");
-  if init() == VX_E_SUCCESS as i32 {
+  if init() == VivoxError::SUCCESS {
     println!("Vivox initialized");
   }
 
@@ -70,39 +74,27 @@ pub fn hello_vivox() {
   join_echo();
 }
 
-fn init() -> i32 {
+fn init() -> VivoxError {
   use std::mem;
 
   unsafe {
     let mut default_config: vx_sdk_config_t = mem::zeroed();
-    let mut status = vx_get_default_config3(
+    let mut status: VivoxError = num::FromPrimitive::from_i32(vx_get_default_config3(
       &mut default_config,
       mem::size_of::<vx_sdk_config_t>() as size_t
-    );
+    )).unwrap();
   
-    if status != VX_E_SUCCESS as i32 {
-      let err_str = vx_get_error_string(status) as *mut i8;
-  
-      panic!("vx_get_default_config3() returned {}: {}",
-        status,
-        CString::from_raw(
-          err_str
-        ).into_string().expect("Unable to get error string!"));
+    if status != VivoxError::SUCCESS {
+      panic!("vx_get_default_config3() returned {}", status);
     }
   
-    status = vx_initialize3(
+    status = num::FromPrimitive::from_i32(vx_initialize3(
       &mut default_config,
       mem::size_of::<vx_sdk_config_t>() as size_t
-    );
+    )).unwrap();
   
-    if status != VX_E_SUCCESS as i32 {
-      let err_str = vx_get_error_string(status) as *mut i8;
-  
-      panic!("vx_initialize3() returned {}: {}",
-        status,
-        CString::from_raw(
-          err_str
-        ).into_string().expect("Unable to get error string!"));
+    if status != VivoxError::SUCCESS {
+      panic!("vx_initialize3() returned {}", status);
     }
 
     status
@@ -309,7 +301,11 @@ fn message_handler(msg: *mut vx_message_base_t) {
 fn response_handler(resp: *mut vx_resp_base_t) {
   unsafe {
     if (*resp).return_code == 1 {
-      println!("[Vivox] ERROR {}, {}", (*resp).status_code, CStr::from_ptr(vx_get_error_string((*resp).status_code)).to_str().unwrap());
+      let stat_code: VivoxError = num::FromPrimitive::from_i32((*resp).status_code).unwrap();
+      println!(
+        "[Vivox] ERROR {}",
+        stat_code,
+      );
 
       return;
     }

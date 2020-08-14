@@ -3,19 +3,16 @@ use std::fmt;
 use vivox_rs_sys::vx_get_error_string;
 
 #[repr(i32)]
-pub enum AccessTokenError {
-  ALREADY_USED =          20_120,
-  CLAIMS_MISMATCH =       20_123,
-  EXPIRED =               20_121,
-  INTERNAL_ERROR =        20_125,
-  INVALID_SIGNATURE =     20_122,
-  ISSUER_MISMATCH =       20_128,
-  MALFORMED =             20_124,
-  SERVICE_UNAVAILABLE =   20_127,
-}
-
-#[repr(i32)]
+#[derive(Clone, Copy, FromPrimitive, PartialEq)]
 pub enum VivoxError {
+  ALREADY_USED =                                    20_120,
+  CLAIMS_MISMATCH =                                 20_123,
+  EXPIRED =                                         20_121,
+  INTERNAL_ERROR =                                  20_125,
+  INVALID_SIGNATURE =                               20_122,
+  ISSUER_MISMATCH =                                 20_128,
+  MALFORMED =                                       20_124,
+  SERVICE_UNAVAILABLE =                             20_127,
   ACCOUNT_MISCONFIGURED =                           1_059,
   ALREADY_EXIST =                                   1_101,
   ALREADY_INITIALIZED =                             1_085,
