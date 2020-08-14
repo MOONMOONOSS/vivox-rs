@@ -13,6 +13,7 @@ use std::ffi::{CString, CStr};
 use std::os::raw::c_int;
 use std::time::SystemTime;
 
+pub mod error;
 pub mod sessiongroup;
 pub mod tokengen;
 pub(crate) mod helpers;
