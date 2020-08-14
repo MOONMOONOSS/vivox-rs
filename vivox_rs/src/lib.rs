@@ -15,13 +15,13 @@ use std::ffi::CStr;
 use std::os::raw::c_int;
 use std::time::SystemTime;
 
-pub mod error;
+pub mod enums;
 pub mod misc;
 pub mod sessiongroup;
 pub mod tokengen;
 pub(crate) mod helpers;
 
-use crate::error::VivoxError;
+use crate::enums::VivoxError;
 use crate::helpers::*;
 use crate::sessiongroup::AddSession;
 use crate::tokengen::TokenGenerator;
