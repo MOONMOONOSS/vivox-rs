@@ -1,3 +1,6 @@
+use std::ffi::CStr;
+use std::fmt;
+use vivox_rs_sys::vx_get_error_string;
 
 #[repr(i32)]
 pub enum AccessTokenError {
@@ -119,4 +122,23 @@ pub enum VivoxError {
   WRONG_CONNECTOR =                                 1_016,
   XMPP_BACKEND_REQUIRED =                           5_023,
   XNETCONECT_FAILED =                               1_093,
+}
+
+impl fmt::Debug for VivoxError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("VivoxError")
+      .field("error_code", &(*self as i32))
+      .field("explanation", format!("{}", self))
+      .finish()
+  }
+}
+
+impl fmt::Display for VivoxError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let err = vx_get_error_string(*self as i32) as *mut i8;
+
+    let conv_str = unsafe { CStr::from_ptr(err).to_str().unwrap() };
+
+    write!(f, "{}", conv_str)
+  }
 }
